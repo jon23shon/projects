@@ -1,125 +1,226 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Raffle-Based Dare Game',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: GameScreen(
+        game: Game(
+          players: [
+            Player(name: 'Player 1', points: 100),
+            Player(name: 'Player 2', points: 100),
+            Player(name: 'Player 3', points: 100),
+          ],
+          exclusiveDares: [
+            Dare(description: 'Exclusive dare 1', points: 20),
+            Dare(description: 'Exclusive dare 2', points: 30),
+            Dare(description: 'Exclusive dare 3', points: 40),
+          ],
+          dares: List.generate(
+            20,
+            (index) => Dare(
+              description: 'Dare ${index + 1}',
+              points: 10,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class Game {
+  List<Player> players;
+  List<Dare> dares;
+  List<Dare> exclusiveDares;
+  int currentPlayerIndex;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  Game({
+    required this.players,
+    required this.exclusiveDares,
+    required this.dares,
+  }) : currentPlayerIndex = 0 {
+    for (var player in players) {
+      player.dares = List.from(dares);
+    }
+  }
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  void nextPlayer() {
+    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+  }
 
-  final String title;
+  void completeDare(Player player, Dare dare) {
+    player.points += dare.points;
+    player.dares.remove(dare);
+    if (player.points >= 200) {
+      player.exclusiveDares.addAll(exclusiveDares);
+      exclusiveDares.clear();
+    }
+  }
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  void forfeitDare(Player player, Dare dare) {
+    player.points -= dare.points;
+    player.dares.remove(dare);
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class Player {
+  String name;
+  int points;
+  List<Dare> dares;
+  List<Dare> exclusiveDares;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  Player({
+    required this.name,
+    this.points = 100,
+    this.dares = const [],
+    this.exclusiveDares = const [],
+  });
+}
+
+class Dare {
+  String description;
+  int points;
+
+  Dare({required this.description, required this.points});
+}
+
+class PlayerCard extends StatefulWidget {
+  final Player player;
+
+  const PlayerCard({required this.player});
+
+  @override
+  _PlayerCardState createState() => _PlayerCardState();
+}
+
+class _PlayerCardState extends State<PlayerCard> {
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            title: Text(widget.player.name),
+            trailing: Text('${widget.player.points} points'),
+          ),
+          Column(
+            children: widget.player.dares
+                .map((dare) => DareCard(dare: dare))
+                .toList(),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+class DareCard extends StatelessWidget {
+  final Dare dare;
+
+  const DareCard({required this.dare});
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    return Card(
+      child: ListTile(
+        title: Text(dare.description),
+        leading: Icon(Icons.assignment),
+        trailing: Text('${dare.points} points'),
+      ),
+    );
+  }
+}
+
+class ExclusiveDareCard extends StatelessWidget {
+  final Dare dare;
+
+  const ExclusiveDareCard({required this.dare});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        title: Text(dare.description),
+        leading: Icon(Icons.star),
+        trailing: Text('${dare.points} points'),
+      ),
+    );
+  }
+}
+
+class GameScreen extends StatefulWidget {
+  final Game game;
+
+  const GameScreen({required this.game});
+
+  @override
+  _GameScreenState createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Text('Raffle-Based Dare Game'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.game.players.length,
+              itemBuilder: (context, index) {
+                return PlayerCard(player: widget.game.players[index]);
+              },
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          ElevatedButton(
+            onPressed: () {
+              var player = widget.game.players[widget.game.currentPlayerIndex];
+              var dare = player.dares.removeAt(0);
+
+              if (Random().nextBool()) {
+                widget.game.completeDare(player, dare);
+                player.exclusiveDares.add(widget.game.exclusiveDares.removeAt(
+                    Random().nextInt(widget.game.exclusiveDares.length)));
+              } else {
+                widget.game.forfeitDare(player, dare);
+              }
+
+              if (player.dares.isEmpty) {
+                widget.game.nextPlayer();
+              }
+
+              setState(() {});
+            },
+            child: Text('Draw a dare'),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.game.players.length,
+              itemBuilder: (context, index) {
+                var player = widget.game.players[index];
+                return Column(
+                  children: player.exclusiveDares
+                      .map((dare) => ExclusiveDareCard(dare: dare))
+                      .toList(),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
